@@ -112,7 +112,6 @@ func (d *Discovery) nodesproc() {
 		// 不断去 poll 本
 		arg := &model.ArgPolls{
 			AppID:           []string{model.AppID},
-			Zone:            d.c.Env.Zone, // 是否应该传递zone，因为希望返回所有zone的信息
 			Env:             d.c.Env.DeployEnv,
 			Hostname:        d.c.Env.Host,
 			LatestTimestamp: []int64{lastTs},
@@ -138,8 +137,7 @@ func (d *Discovery) nodesproc() {
 				for _, addr := range in.Addrs {
 					u, err := url.Parse(addr)
 					if err == nil && u.Scheme == "http" {
-						if in.Zone == arg.Zone {
-							// 自己请求的zone
+						if in.Zone == d.c.Env.Zone {
 							nodes = append(nodes, u.Host)
 						} else {
 							// 其他zone
