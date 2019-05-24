@@ -14,6 +14,7 @@ import (
 func (d *Discovery) Register(c context.Context, ins *model.Instance, latestTimestamp int64, replication bool) {
 	_ = d.registry.Register(ins, latestTimestamp)
 	if !replication {
+		// 不是从别的 discovery 同步而来，则需要将其同步给其他的node
 		_ = d.nodes.Load().(*registry.Nodes).Replicate(c, model.Register, ins, ins.Zone != d.c.Env.Zone)
 	}
 }

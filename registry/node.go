@@ -32,7 +32,7 @@ type Node struct {
 
 	// url
 	client       *http.Client
-	pRegisterURL string
+	pRegisterURL string // per register
 	registerURL  string
 	cancelURL    string
 	renewURL     string
@@ -109,6 +109,7 @@ func (n *Node) call(c context.Context, action model.Action, i *model.Instance, u
 	params.Set("appid", i.AppID)
 	params.Set("hostname", i.Hostname)
 	if n.otherZone {
+		// 其他zone的话，则需要其他zone的node接收到后，进行 replication 操作
 		params.Set("replication", "false")
 	} else {
 		params.Set("replication", "true")

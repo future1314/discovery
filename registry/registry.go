@@ -89,9 +89,9 @@ func (r *Registry) newApp(ins *model.Instance) (a *model.App) {
 
 // Register a new instance.
 func (r *Registry) Register(ins *model.Instance, latestTime int64) (err error) {
-	a := r.newApp(ins)
+	a := r.newApp(ins) // 会注册到register中
 	i, ok := a.NewInstance(ins, latestTime)
-	if ok {
+	if ok { // 表示是否新建，如果是新的，更新数据
 		r.gd.incrExp()
 	}
 	// NOTE: make sure free poll before update appid latest timestamp.
@@ -188,7 +188,9 @@ func (r *Registry) Polls(arg *model.ArgPolls) (ch chan map[string]*model.Instanc
 		arg.LatestTimestamp = make([]int64, len(arg.AppID))
 	}
 	for i := range arg.AppID {
+		// 返回的错误可能是 NothingFound 或者 NotModified
 		in, err = r.Fetch(arg.Zone, arg.Env, arg.AppID[i], arg.LatestTimestamp[i], model.InstanceStatusUP)
+		// 只要有一个 NothingFound 就返回
 		if err == errors.NothingFound {
 			log.Errorf("Polls zone(%s) env(%s) appid(%s) error(%v)", arg.Zone, arg.Env, arg.AppID[i], err)
 			return
@@ -198,11 +200,13 @@ func (r *Registry) Polls(arg *model.ArgPolls) (ch chan map[string]*model.Instanc
 			new = true
 		}
 	}
+	// new 表示有更新，有更新的时候，为了和没有更新保持返回值一致，所以创建了一个 size=1 的channel
 	if new {
 		ch = make(chan map[string]*model.InstanceInfo, 1)
 		ch <- ins
 		return
 	}
+	// 没有更新，则要来判断
 	r.cLock.Lock()
 	for i := range arg.AppID {
 		k := pollKey(arg.Env, arg.AppID[i])
@@ -233,6 +237,7 @@ func (r *Registry) Polls(arg *model.ArgPolls) (ch chan map[string]*model.Instanc
 // NOTE: make sure free poll before update appid latest timestamp.
 func (r *Registry) broadcast(env, appid string) {
 	key := pollKey(env, appid)
+	// 此处broadcast的时候，锁住的时间有点长，此时如果有新的 instance 来 poll 进来，会阻塞住
 	r.cLock.Lock()
 	defer r.cLock.Unlock()
 	conns, ok := r.conns[key]
@@ -240,8 +245,11 @@ func (r *Registry) broadcast(env, appid string) {
 		return
 	}
 	delete(r.conns, key)
+	// 通知所有 long-pull 的 connection
+	// hostname, conn
 	for _, conn := range conns {
 		ii, _ := r.Fetch(conn.arg.Zone, env, appid, 0, model.InstanceStatusUP) // TODO(felix): latesttime!=0 increase
+		// 每个 conn 都是从同一个 hostname来的，但是可能有多个请求同时在 poll，所有给channel count 次发送
 		for i := 0; i < conn.count; i++ {
 			select {
 			case conn.ch <- map[string]*model.InstanceInfo{appid: ii}: // NOTE: if chan is full, means no poller.

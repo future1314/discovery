@@ -26,7 +26,7 @@ func init() {
 	if hostname, err = os.Hostname(); err != nil || hostname == "" {
 		hostname = os.Getenv("HOSTNAME")
 	}
-	flag.StringVar(&confPath, "conf", "discovery-example.toml", "config path")
+	flag.StringVar(&confPath, "conf", "./cmd/discovery/discovery-example.toml", "config path")
 	flag.StringVar(&region, "region", os.Getenv("REGION"), "avaliable region. or use REGION env variable, value: sh etc.")
 	flag.StringVar(&zone, "zone", os.Getenv("ZONE"), "avaliable zone. or use ZONE env variable, value: sh001/sh002 etc.")
 	flag.StringVar(&deployEnv, "deploy.env", os.Getenv("DEPLOY_ENV"), "deploy env. or use DEPLOY_ENV env variable, value: dev/fat1/uat/pre/prod etc.")

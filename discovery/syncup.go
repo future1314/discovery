@@ -22,6 +22,7 @@ var (
 func (d *Discovery) syncUp() {
 	nodes := d.nodes.Load().(*registry.Nodes)
 	for _, node := range nodes.AllNodes() {
+		// allNodes 返回本zone的所有节点，包括自己，以及其他zone中的随机一个节点
 		if nodes.Myself(node.Addr) {
 			continue
 		}
@@ -38,8 +39,10 @@ func (d *Discovery) syncUp() {
 			log.Errorf("service syncup from(%s) failed ", uri)
 			continue
 		}
+		// appid, instance_list
 		for _, is := range res.Data {
 			for _, i := range is {
+				// 此处不太合理，更新一次就 broadcast 一次
 				_ = d.registry.Register(i, i.LatestTimestamp)
 			}
 		}
@@ -67,6 +70,7 @@ func (d *Discovery) regSelf() context.CancelFunc {
 		RenewTimestamp:  now,
 		DirtyTimestamp:  now,
 	}
+	// 注册完自己后，需要将信息复制到其他node
 	d.Register(ctx, ins, now, false)
 	go func() {
 		ticker := time.NewTicker(30 * time.Second)
@@ -105,9 +109,10 @@ func (d *Discovery) nodesproc() {
 		lastTs int64
 	)
 	for {
+		// 不断去 poll 本
 		arg := &model.ArgPolls{
 			AppID:           []string{model.AppID},
-			Zone:            d.c.Env.Zone,
+			Zone:            d.c.Env.Zone, // 是否应该传递zone，因为希望返回所有zone的信息
 			Env:             d.c.Env.DeployEnv,
 			Hostname:        d.c.Env.Host,
 			LatestTimestamp: []int64{lastTs},
@@ -127,14 +132,17 @@ func (d *Discovery) nodesproc() {
 			nodes []string
 			zones = make(map[string][]string)
 		)
+		// zone, ins
 		for _, ins := range ins.Instances {
 			for _, in := range ins {
 				for _, addr := range in.Addrs {
 					u, err := url.Parse(addr)
 					if err == nil && u.Scheme == "http" {
 						if in.Zone == arg.Zone {
+							// 自己请求的zone
 							nodes = append(nodes, u.Host)
 						} else {
+							// 其他zone
 							zones[in.Zone] = append(zones[in.Zone], u.Host)
 						}
 					}
@@ -143,7 +151,7 @@ func (d *Discovery) nodesproc() {
 		}
 		lastTs = ins.LatestTimestamp
 		c := new(conf.Config)
-		*c = *d.c
+		*c = *(d.c)
 		c.Nodes = nodes
 		c.Zones = zones
 		ns := registry.NewNodes(c)

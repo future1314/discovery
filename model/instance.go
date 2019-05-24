@@ -157,6 +157,7 @@ func (p *Apps) Del(zone string) {
 }
 
 // InstanceInfo return slice of instances.if up is true,return all status instance else return up status instance
+// zone 为空表示选择所有zone的 instance
 func (p *Apps) InstanceInfo(zone string, latestTime int64, status uint32) (ci *InstanceInfo, err error) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
@@ -177,9 +178,10 @@ func (p *Apps) InstanceInfo(zone string, latestTime int64, status uint32) (ci *I
 				// if up is false return all status instance
 				if i.filter(status) {
 					// if i.Status == InstanceStatusUP && i.LatestTimestamp > latestTime { // TODO(felix): increase
-					ni := new(Instance)
-					*ni = *i
-					instance = append(instance, ni)
+					// 没必要再做一次复制了
+					//ni := new(Instance)
+					//*ni = *i
+					instance = append(instance, i)
 				}
 			}
 			ci.Instances[z] = instance
@@ -245,6 +247,7 @@ func (a *App) NewInstance(ni *Instance, latestTime int64) (i *Instance, ok bool)
 	if ok {
 		ni.UpTimestamp = oi.UpTimestamp
 		if ni.DirtyTimestamp < oi.DirtyTimestamp {
+			// 新注册的还没有现在保存的新，则还是用老的
 			log.Warningf("register exist(%v) dirty timestamp over than caller(%v)", oi, ni)
 			ni = oi
 		}

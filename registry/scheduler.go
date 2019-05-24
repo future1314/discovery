@@ -11,7 +11,7 @@ import (
 
 // Scheduler info.
 type scheduler struct {
-	schedulers map[string]*model.Scheduler
+	schedulers map[string]*model.Scheduler // key: appid-env
 	mutex      sync.RWMutex
 	r          *Registry
 }

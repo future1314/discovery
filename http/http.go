@@ -28,8 +28,11 @@ func Init(c *conf.Config, d *discovery.Discovery) {
 	dis = d
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.New()
+	// 不能将下面两个调换顺序调换顺序，router中生成新的group会将下面的 middleware 带上
+	// 顺序也是我们先调用log，然后再调用recover
 	engine.Use(loggerHandler, recoverHandler)
 	innerRouter(engine)
+
 	go func() {
 		if err := engine.Run(c.HTTPServer.Addr); err != nil {
 			panic(err)

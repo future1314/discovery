@@ -21,6 +21,6 @@ require (
 	google.golang.org/grpc v0.0.0-20181030232906-a88340f3c899
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/go-playground/validator.v8 v8.18.2 // indirect
-	gopkg.in/h2non/gock.v1 v1.0.8
+	gopkg.in/h2non/gock.v1 v1.0.8 // indirect
 	gopkg.in/yaml.v2 v2.2.1 // indirect
 )

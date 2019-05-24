@@ -53,11 +53,13 @@ func (ns *Nodes) Replicate(c context.Context, action model.Action, i *model.Inst
 	}
 	eg, c := errgroup.WithContext(c)
 	for _, n := range ns.nodes {
+		// 同步给同一个zone下面的其他node
 		if !ns.Myself(n.addr) {
 			ns.action(c, eg, action, n, i)
 		}
 	}
 	if !otherZone {
+		// 如果不是从别的 zone 同步过来，则需要发到其他 zone
 		for _, zns := range ns.zones {
 			if n := len(zns); n > 0 {
 				ns.action(c, eg, action, zns[rand.Intn(n)], i)
